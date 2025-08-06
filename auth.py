@@ -1,16 +1,14 @@
-from flask import Flask, request, jsonify
+from flask import Blueprint, request, jsonify
 from flask_bcrypt import Bcrypt
 import sqlite3 as sql
 import jwt
 import datetime
 from functools import wraps
 
-app = Flask(__name__)
-bcrypt = Bcrypt(app)
+auth_bp = Blueprint('auth_bp', __name__)
+bcrypt = Bcrypt()
 
 SECRET_KEY = 'my_secret_key'
-app.config['SECRET_KEY'] = SECRET_KEY
-
 DATABASE = 'campusconnect.db'
 
 def get_db_connection():
@@ -39,7 +37,7 @@ def token_required(f):
         return f(user_id, *args, **kwargs)
     return decorated
 
-@app.route('/register', methods=['POST'])
+@auth_bp.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
     username = data['username']
@@ -53,7 +51,7 @@ def register():
         cursor = conn.cursor()
         cursor.execute(
             'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-        (username, email, hashed_password)
+            (username, email, hashed_password)
         )
         conn.commit()
         conn.close()
@@ -61,7 +59,7 @@ def register():
     except sql.IntegrityError:
         return jsonify({'message': 'Username or email already exists!'}), 409
 
-@app.route('/login', methods=['POST'])
+@auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     email = data['email']
@@ -79,13 +77,9 @@ def login():
                 'user_id': user['id'],
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
             },
-            app.config['SECRET_KEY'],
+            SECRET_KEY,
             algorithm='HS256'
         )
-        return jsonify({'message': token}), 200
+        return jsonify({'token': token}), 200
     else:
         return jsonify({'message': 'Invalid credentials!'}), 401
-
-if __name__ == '__main__':
-    app.run(debug=True)
-

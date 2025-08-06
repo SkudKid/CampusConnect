@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     user_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
-    due_date TEXT
+    due_date TEXT,
     priority INTEGER DEFAULT 0,
     FOREIGN KEY(user_id) REFERENCES users(id)
 )
