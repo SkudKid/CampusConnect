@@ -34,3 +34,23 @@ def get_tasks(user_id):                                                         
     conn.close()
     return jsonify(tasks), 200
 
+@tasks_bp.route('/tasks/<int:task_id>', methods=['DELETE'])
+@token_required
+def delete_tasks(user_id, task_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    #Make sure task exists & belongs to user
+    cursor.execute('SELECT * FROM tasks WHERE id = ? AND user_id = ?', (task_id, user_id,))
+    task = cursor.fetchone()
+
+    if not task:
+        conn.close()
+        return jsonify({'message': 'Task not found or not authorized to delete'}), 404
+
+    #DELETE IT!
+    cursor.execute('DELETE FROM tasks WHERE id = ? AND user_id = ?', (task_id, user_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': f'Task {task_id} deleted successfully'}), 200
