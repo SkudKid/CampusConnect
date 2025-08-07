@@ -4,6 +4,10 @@ import sqlite3 as sql
 import jwt
 import datetime
 from functools import wraps
+from flask import Blueprint, request, jsonify
+
+def error_response(message, status_code):                                                                               #ERROR RESPONSE
+    return jsonify({'error': message}), status_code
 
 auth_bp = Blueprint('auth_bp', __name__)
 bcrypt = Bcrypt()
@@ -11,12 +15,12 @@ bcrypt = Bcrypt()
 SECRET_KEY = 'my_secret_key'
 DATABASE = 'campusconnect.db'
 
-def get_db_connection():
+def get_db_connection():                                                                                                #CONNECT TO DATABASE
     conn = sql.connect(DATABASE)
     conn.row_factory = sql.Row
     return conn
 
-def token_required(f):
+def token_required(f):                                                                                                  #REQUIRE VALID TOKEN FOR ANYTHING IN APPLICATION. IS A MUST
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
@@ -37,12 +41,23 @@ def token_required(f):
         return f(user_id, *args, **kwargs)
     return decorated
 
-@auth_bp.route('/register', methods=['POST'])
+@auth_bp.route('/register', methods=['POST'])                                                                      #REGISTER USER
 def register():
     data = request.get_json()
-    username = data['username']
-    email = data['email']
-    password = data['password']
+
+    if not data:
+        return error_response("Missing request body", 400)
+
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not username:
+        return error_response("Username is required", 400)
+    if not email:
+        return error_response("Email is required", 400)
+    if not password:
+        return error_response("Password is required", 400)
 
     hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
@@ -57,13 +72,23 @@ def register():
         conn.close()
         return jsonify({'message': 'User registered successfully!'}), 201
     except sql.IntegrityError:
-        return jsonify({'message': 'Username or email already exists!'}), 409
+        return error_response("Username or email already exists!", 409)
+
 
 @auth_bp.route('/login', methods=['POST'])
-def login():
+def login():                                                                                                            #LOGIN USER
     data = request.get_json()
-    email = data['email']
-    password = data['password']
+
+    if not data:
+        return error_response("Missing request body", 400)
+
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email:
+        return error_response("Email is required", 400)
+    if not password:
+        return error_response("Password is required", 400)
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -82,4 +107,5 @@ def login():
         )
         return jsonify({'token': token}), 200
     else:
-        return jsonify({'message': 'Invalid credentials!'}), 401
+        return error_response("Invalid email or password", 401)
+

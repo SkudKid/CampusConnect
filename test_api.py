@@ -55,3 +55,14 @@ task_id_to_delete = 1
 r = requests.delete(f"{BASE_URL}/api/tasks/{task_id_to_delete}", headers=headers)
 print("Delete Task:", r.status_code, r.json())
 
+# ---------- Create Event ----------
+event_data = {
+    "title": "Midterm Exam",
+    "description": "CIS375 midterm in room 204",
+    "event_date": "2025-08-20",
+    "location": "Building A",
+    "shared_with": "teammate@example.com"
+}
+
+r = requests.post(f"{BASE_URL}/api/events", json=event_data, headers=headers)
+print("Create Event:", r.status_code, r.json())
