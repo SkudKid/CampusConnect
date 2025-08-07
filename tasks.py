@@ -36,7 +36,7 @@ def get_tasks(user_id):                                                         
 
 @tasks_bp.route('/tasks/<int:task_id>', methods=['DELETE'])
 @token_required
-def delete_tasks(user_id, task_id):
+def delete_tasks(user_id, task_id):                                                                                     #DELETE TASKS
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -54,3 +54,36 @@ def delete_tasks(user_id, task_id):
     conn.close()
 
     return jsonify({'message': f'Task {task_id} deleted successfully'}), 200
+
+@tasks_bp.route('/tasks/<int:task_id>', methods=['PUT'])
+@token_required
+def update_task(user_id, task_id):
+    data = request.get_json()
+
+    # Extract updated fields
+    title = data.get('title')
+    description = data.get('description')
+    due_date = data.get('due_date')
+    priority = data.get('priority')
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Make sure task exists and belongs to user
+    cursor.execute('SELECT * FROM tasks WHERE id = ? AND user_id = ?', (task_id, user_id))
+    task = cursor.fetchone()
+    if not task:
+        conn.close()
+        return jsonify({'message': 'Task not found or not authorized'}), 404
+
+    # Update task
+    cursor.execute('''
+        UPDATE tasks
+        SET title = ?, description = ?, due_date = ?, priority = ?
+        WHERE id = ? AND user_id = ?
+    ''', (title, description, due_date, priority, task_id, user_id))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': f'Task {task_id} updated successfully'}), 200

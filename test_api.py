@@ -36,3 +36,22 @@ print("Create Task:", r.status_code, r.json())
 # ---------- Get Tasks ----------
 r = requests.get(f"{BASE_URL}/api/tasks", headers=headers)
 print("Get Tasks:", r.status_code, r.json())
+
+# ---------- Edit Tasks ----------
+task_id_to_edit = 1
+updated_data = {
+    "title": "Updated Task Title",
+    "description": "New description here",
+    "due_date": "2025-08-10",
+    "priority": 1
+}
+
+r = requests.put(f"{BASE_URL}/api/tasks/{task_id_to_edit}", json=updated_data, headers=headers)
+print("Edit Task:", r.status_code, r.json())
+
+
+# ---------- Delete Tasks ----------
+task_id_to_delete = 1
+r = requests.delete(f"{BASE_URL}/api/tasks/{task_id_to_delete}", headers=headers)
+print("Delete Task:", r.status_code, r.json())
+
