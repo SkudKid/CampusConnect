@@ -1,68 +1,107 @@
 import requests
+import json
 
 BASE_URL = "http://localhost:5000"
 
-# ---------- Register User ----------
-register_data = {
-    "username": "miguel",
-    "email": "miguel@example.com",
-    "password": "1234"
-}
-r = requests.post(f"{BASE_URL}/auth/register", json=register_data)
-print("Register:", r.status_code, r.json())
+def show(title, resp):
+    print(f"\n=== {title} ===")
+    print("Status:", resp.status_code)
+    try:
+        print("JSON:", resp.json())
+    except Exception:
+        print("Raw:", resp.text)
 
-# ---------- Login User ----------
-login_data = {
-    "email": "miguel@example.com",
-    "password": "1234"
-}
-r = requests.post(f"{BASE_URL}/auth/login", json=login_data)
-print("Login:", r.status_code, r.json())
+def main():
+    # ---------- Register (ok if 409 already exists) ----------
+    register_data = {"username": "miguel", "email": "miguel@example.com", "password": "1234"}
+    r = requests.post(f"{BASE_URL}/auth/register", json=register_data)
+    show("Register", r)
 
-# Save token
-token = r.json().get("token")
-headers = {"Authorization": token}
+    # ---------- Login ----------
+    login_data = {"email": "miguel@example.com", "password": "1234"}
+    r = requests.post(f"{BASE_URL}/auth/login", json=login_data)
+    show("Login", r)
 
-# ---------- Create Task ----------
-task_data = {
-    "title": "Test Task",
-    "description": "This is a test task",
-    "due_date": "2025-08-07",
-    "priority": 2
-}
-r = requests.post(f"{BASE_URL}/api/tasks", json=task_data, headers=headers)
-print("Create Task:", r.status_code, r.json())
+    # Pull token
+    try:
+        token = r.json().get("token")
+    except Exception:
+        print("Could not parse login JSON. Aborting.")
+        return
+    if not token:
+        print("No token returned. Aborting.")
+        return
 
-# ---------- Get Tasks ----------
-r = requests.get(f"{BASE_URL}/api/tasks", headers=headers)
-print("Get Tasks:", r.status_code, r.json())
+    headers = {"Authorization": token}
 
-# ---------- Edit Tasks ----------
-task_id_to_edit = 1
-updated_data = {
-    "title": "Updated Task Title",
-    "description": "New description here",
-    "due_date": "2025-08-10",
-    "priority": 1
-}
+    # ========== TASKS ==========
+    # ---------- Create Task ----------
+    task_payload = {
+        "title": "Test Task",
+        "description": "This is a test task",
+        "due_date": "2025-08-07",
+        "priority": 2
+    }
+    r = requests.post(f"{BASE_URL}/api/tasks", json=task_payload, headers=headers)
+    show("Create Task", r)
 
-r = requests.put(f"{BASE_URL}/api/tasks/{task_id_to_edit}", json=updated_data, headers=headers)
-print("Edit Task:", r.status_code, r.json())
+    # ---------- List Tasks ----------
+    r = requests.get(f"{BASE_URL}/api/tasks", headers=headers)
+    show("Get Tasks", r)
 
+    # grab an id for update/delete
+    try:
+        tasks = r.json()
+        task_id = tasks[0]["id"] if tasks else None
+    except Exception:
+        task_id = None
 
-# ---------- Delete Tasks ----------
-task_id_to_delete = 1
-r = requests.delete(f"{BASE_URL}/api/tasks/{task_id_to_delete}", headers=headers)
-print("Delete Task:", r.status_code, r.json())
+    # ---------- Update Task (partial PUT) ----------
+    if task_id:
+        # Only update one field to confirm partial update works
+        update_payload = {"priority": 1}
+        r = requests.put(f"{BASE_URL}/api/tasks/{task_id}", json=update_payload, headers=headers)
+        show(f"Update Task {task_id} (partial)", r)
 
-# ---------- Create Event ----------
-event_data = {
-    "title": "Midterm Exam",
-    "description": "CIS375 midterm in room 204",
-    "event_date": "2025-08-20",
-    "location": "Building A",
-    "shared_with": "teammate@example.com"
-}
+        # ---------- Delete Task ----------
+        r = requests.delete(f"{BASE_URL}/api/tasks/{task_id}", headers=headers)
+        show(f"Delete Task {task_id}", r)
+    else:
+        print("\n(No tasks to update/delete)")
 
-r = requests.post(f"{BASE_URL}/api/events", json=event_data, headers=headers)
-print("Create Event:", r.status_code, r.json())
+    # ========== EVENTS ==========
+    # ---------- Create Event ----------
+    event_payload = {
+        "title": "Midterm Exam",
+        "description": "CIS375 midterm in room 204",
+        "event_date": "2025-08-20",
+        "location": "Building A",
+        "shared_with": "teammate@example.com"
+    }
+    r = requests.post(f"{BASE_URL}/api/events", json=event_payload, headers=headers)
+    show("Create Event", r)
+
+    # ---------- List Events ----------
+    r = requests.get(f"{BASE_URL}/api/events", headers=headers)
+    show("Get Events", r)
+
+    # grab an event id
+    try:
+        events = r.json()
+        event_id = events[0]["id"] if events else None
+    except Exception:
+        event_id = None
+
+    # ---------- Get Single Event ----------
+    if event_id:
+        r = requests.get(f"{BASE_URL}/api/events/{event_id}", headers=headers)
+        show(f"Get Event {event_id}", r)
+
+        # ---------- Delete Event ----------
+        r = requests.delete(f"{BASE_URL}/api/events/{event_id}", headers=headers)
+        show(f"Delete Event {event_id}", r)
+    else:
+        print("\n(No events to fetch/delete)")
+
+if __name__ == "__main__":
+    main()

@@ -49,7 +49,7 @@ def get_tasks(user_id):                                                         
 
 @tasks_bp.route('/tasks/<int:task_id>', methods=['DELETE'])
 @token_required
-def delete_tasks(user_id, task_id):                                                                                     #DELETE TASKS
+def delete_task(user_id, task_id):                                                                                     #DELETE TASKS
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -95,7 +95,7 @@ def update_task(user_id, task_id):                                              
     updated_due_date = data.get('due_date', task_dict['due_date'])
     updated_priority = data.get('priority', task_dict['priority'])
 
-    if 'priority' in data and not isinstance(priority, int):
+    if 'priority' in data and not isinstance(updated_priority, int):
         return error_response("Priority must be an integer", 400)
 
     # Update in database
